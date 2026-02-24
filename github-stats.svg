@@ -1,0 +1,28 @@
+<svg width="400" height="180" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font: bold 18px 'Segoe UI', Ubuntu, Sans-Serif; fill: #58a6ff; }
+    .stat { font: 600 14px 'Segoe UI', Ubuntu, "Helvetica Neue", Sans-Serif; fill: #c9d1d9; }
+    .stricon { font: 14px 'Segoe UI', Ubuntu, "Helvetica Neue", Sans-Serif; fill: #7ee787; }
+    .bold { font-weight: 700; }
+  </style>
+  <rect width="400" height="180" fill="#0d1117" rx="8" stroke="#30363d" stroke-width="1"/>
+  <text x="25" y="35" class="title">GitHub Stats</text>
+  
+  <g transform="translate(25, 75)">
+    <text x="0" y="0" class="stricon">⭐</text>
+    <text x="25" y="0" class="stat">Total Stars Earned:</text>
+    <text x="350" y="0" class="stat bold" text-anchor="end">5</text>
+  </g>
+  
+  <g transform="translate(25, 110)">
+    <text x="0" y="0" class="stricon">🔄</text>
+    <text x="25" y="0" class="stat">Total Commits (This Year):</text>
+    <text x="350" y="0" class="stat bold" text-anchor="end">385</text>
+  </g>
+  
+  <g transform="translate(25, 145)">
+    <text x="0" y="0" class="stricon">🔀</text>
+    <text x="25" y="0" class="stat">Total PRs &amp; Issues:</text>
+    <text x="350" y="0" class="stat bold" text-anchor="end">0</text>
+  </g>
+</svg>
