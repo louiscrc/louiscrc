@@ -21,7 +21,7 @@ Welcome to my GitHub profile! I am a developer who primarily works on private Gi
 ## 📈 Contribution Graph
 
 ### GitHub Activity
-![GitHub stats](https://github-readme-stats.vercel.app/api?username=louiscrc&show_icons=true&theme=radical&hide_border=true)
+![GitHub Stats](./github-stats.svg)
 
 ### GitLab Activity
 Since most of my work is on private GitLab repositories, here is my GitLab contribution graph!

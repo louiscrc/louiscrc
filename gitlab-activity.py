@@ -13,7 +13,7 @@ import sys
 
 # Configuration
 GITLAB_USERNAME = os.getenv('GITLAB_USERNAME', 'louiscrc')
-GITLAB_TOKEN = os.getenv('GITLAB_TOKEN', '')  # Optional: for private repos
+GITLAB_TOKEN = os.getenv('GITLAB_TOKEN', '')
 GITLAB_URL = os.getenv('GITLAB_URL', 'https://gitlab.com')
 OUTPUT_FILE = 'gitlab-activity.svg'
 
