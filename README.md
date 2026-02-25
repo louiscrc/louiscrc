@@ -21,7 +21,7 @@ Welcome to my GitHub profile! I am a developer who primarily works on private Gi
 ## 📈 Contribution Graph
 
 ### GitHub Activity
-![GitHub Stats](./github-stats.svg)
+![GitHub Contributions](./github-stats.svg)
 
 ### GitLab Activity
 Since most of my work is on private GitLab repositories, here is my GitLab contribution graph!
