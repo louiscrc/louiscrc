@@ -214,7 +214,7 @@ def generate_svg(stats, width=800, height=200):
         '',
         '  <!-- Stats -->',
         f'  <text x="{margin}" y="{margin + 45}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="12">',
-        f'    Total: {total} contributions • {projects} projects',
+        f'    Total: {total} contributions in the last year',
         '  </text>',
         '',
         '  <!-- Contribution Grid -->',

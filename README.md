@@ -28,7 +28,6 @@ Since most of my work is on private GitLab repositories, here is my GitLab contr
 
 ![GitLab Contributions](./gitlab-activity.svg)
 
-> 💡 **Note:** GitLab activity is automatically updated daily via GitHub Actions.
 
 ## 🤝 Connect With Me
 
