@@ -8,7 +8,7 @@
 
   <!-- Stats -->
   <text x="20" y="65" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="12">
-    Total: 663 contributions in the last year
+    Total: 664 contributions in the last year
   </text>
 
   <!-- Contribution Grid -->
@@ -16,7 +16,6 @@
     <text x="-25" y="23" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Mon</text>
     <text x="-25" y="49" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Wed</text>
     <text x="-25" y="75" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Fri</text>
-    <rect x="0" y="52" width="10" height="10" fill="#39d353" rx="2"><title>2025-03-07: 26 contributions</title></rect>
     <rect x="0" y="65" width="10" height="10" fill="#0e4429" rx="2"><title>2025-03-08: 3 contributions</title></rect>
     <rect x="0" y="78" width="10" height="10" fill="#161b22" rx="2"><title>2025-03-09: 0 contributions</title></rect>
     <rect x="13" y="0" width="10" height="10" fill="#006d32" rx="2"><title>2025-03-10: 5 contributions</title></rect>
@@ -380,7 +379,8 @@
     <rect x="676" y="13" width="10" height="10" fill="#0e4429" rx="2"><title>2026-03-03: 1 contributions</title></rect>
     <rect x="676" y="26" width="10" height="10" fill="#161b22" rx="2"><title>2026-03-04: 0 contributions</title></rect>
     <rect x="676" y="39" width="10" height="10" fill="#161b22" rx="2"><title>2026-03-05: 0 contributions</title></rect>
-    <rect x="676" y="52" width="10" height="10" fill="#161b22" rx="2"><title>2026-03-06: 0 contributions</title></rect>
+    <rect x="676" y="52" width="10" height="10" fill="#0e4429" rx="2"><title>2026-03-06: 1 contributions</title></rect>
+    <rect x="676" y="65" width="10" height="10" fill="#161b22" rx="2"><title>2026-03-07: 0 contributions</title></rect>
   </g>
 
   <!-- Legend -->
