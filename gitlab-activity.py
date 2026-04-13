@@ -251,6 +251,7 @@ def grid_week_columns(grid):
 def generate_svg(stats, width=800, height=200):
     """Generate SVG heatmap (rolling year ending today; month labels above grid)."""
     contributions = stats["daily_contributions"]
+    total_commits_365 = stats["total_contributions"]
 
     grid = generate_contribution_grid(contributions)
     month_markers = compute_month_markers(grid)
@@ -315,11 +316,14 @@ def generate_svg(stats, width=800, height=200):
         if day["weekday"] == 6:
             week += 1
 
+    legend_row_y = svg_height - 20
     svg.extend(
         [
             "  </g>",
             "",
-            "  <!-- Legend -->",
+            "  <!-- Legend row: total (left), scale (right) -->",
+            f'  <text x="{margin}" y="{legend_row_y}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" '
+            f'font-size="8">Number of commits (365d) : {total_commits_365}</text>',
             f'  <g transform="translate({svg_width - 200}, {svg_height - 30})">',
             f'    <text x="0" y="10" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="9">{legend_min}</text>',
         ]
