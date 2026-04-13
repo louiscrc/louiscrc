@@ -27,7 +27,7 @@ Most of my day-to-day work lives in **private GitLab** repositories, so what you
 ### GitHub Activity
 
 <!-- github-metrics:start -->
-**GitHub:** run `python github-stats.py` (with `GH_TOKEN`) or wait for CI to refresh these numbers.
+**GitHub:** **0** commits (7d) · **1** commits (30d) · **286** contributions (365d). Lines (contribution commits): **+0/-0** (7d) · **+1007/-2** (30d).
 <!-- github-metrics:end -->
 
 ![GitHub Contributions](./github-stats.svg)
@@ -35,7 +35,7 @@ Most of my day-to-day work lives in **private GitLab** repositories, so what you
 ### GitLab Activity
 
 <!-- gitlab-metrics:start -->
-**GitLab:** run `python gitlab-activity.py` (with `GITLAB_TOKEN`) or wait for CI to refresh these numbers.
+**GitLab:** **18** events (7d) · **39** events (30d) · **563** events (365d) · **90** repositories (membership list or repos seen in your activity).
 <!-- gitlab-metrics:end -->
 
 ![GitLab Contributions](./gitlab-activity.svg)
