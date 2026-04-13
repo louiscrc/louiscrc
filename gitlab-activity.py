@@ -7,7 +7,7 @@ Fetches GitLab contributions and generates an SVG visualization
 import requests
 import json
 from datetime import datetime, timedelta
-from collections import defaultdict
+from collections import Counter, defaultdict
 import os
 import sys
 
@@ -93,22 +93,30 @@ class GitLabActivityFetcher:
         return events
     
     def get_user_projects(self, user_id):
-        """Fetch user's projects"""
+        """Fetch user's projects (paginated). With a token, uses membership=true."""
+        all_projects = []
+        page = 1
         try:
-            # Use /projects?membership=true to get all projects the user is a member of
             url = f"{self.api_url}/projects" if self.token else f"{self.api_url}/users/{user_id}/projects"
-            params = {'per_page': 100}
-            if self.token:
-                params['membership'] = 'true'
-                
-            response = requests.get(
-                url,
-                params=params,
-                headers=self.headers,
-                timeout=10
-            )
-            response.raise_for_status()
-            return response.json()
+            while page <= 50:
+                params = {"per_page": 100, "page": page}
+                if self.token:
+                    params["membership"] = "true"
+                response = requests.get(
+                    url,
+                    params=params,
+                    headers=self.headers,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                batch = response.json()
+                if not batch:
+                    break
+                all_projects.extend(batch)
+                if len(batch) < 100:
+                    break
+                page += 1
+            return all_projects
         except Exception as e:
             print(f"Error fetching projects: {e}", file=sys.stderr)
             return []
@@ -128,22 +136,79 @@ class GitLabActivityFetcher:
                 continue
         
         return contributions
-    
+
     def get_stats(self, user_id):
         """Get user statistics"""
         projects = self.get_user_projects(user_id)
         events = self.get_user_events(user_id)
         contributions = self.calculate_contributions(events)
-        
+
         total_contributions = sum(contributions.values())
-        total_projects = len(projects)
-        
+        membership_projects = len(projects)
+        activity_projects = distinct_projects_from_events(events, days=365)
+        total_projects = max(membership_projects, activity_projects)
+
+        contributions_7d = sum_contributions_last_ndays(contributions, 7)
+        contributions_30d = sum_contributions_last_ndays(contributions, 30)
+
         return {
-            'total_contributions': total_contributions,
-            'total_projects': total_projects,
-            'daily_contributions': contributions,
-            'events': events[:10]  # Latest 10 events
+            "total_contributions": total_contributions,
+            "total_projects": total_projects,
+            "membership_projects": membership_projects,
+            "activity_projects": activity_projects,
+            "contributions_7d": contributions_7d,
+            "contributions_30d": contributions_30d,
+            "daily_contributions": contributions,
+            "events": events[:10],
         }
+
+
+def sum_contributions_last_ndays(contributions, n_days):
+    """Rolling sum of contribution counts for the last n_days calendar days (inclusive of today)."""
+    today = datetime.now().astimezone().date()
+    total = 0
+    for i in range(n_days):
+        d = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        total += contributions.get(d, 0)
+    return total
+
+
+def distinct_projects_from_events(events, days=365):
+    """Count distinct project_id values in the event stream (covers private activity the /projects list can miss)."""
+    cutoff = datetime.now().astimezone() - timedelta(days=days)
+    ids = set()
+    for e in events:
+        try:
+            raw = e.get("created_at")
+            if not raw:
+                continue
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            if dt < cutoff:
+                continue
+        except (TypeError, ValueError):
+            continue
+        pid = e.get("project_id")
+        if pid is not None:
+            ids.add(pid)
+    return len(ids)
+
+
+def update_readme_metrics_block(readme_path, start_marker, end_marker, inner_markdown):
+    if not os.path.isfile(readme_path):
+        return
+    try:
+        with open(readme_path, encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return
+    if start_marker not in text or end_marker not in text:
+        return
+    pre, rest = text.split(start_marker, 1)
+    _, post = rest.split(end_marker, 1)
+    new_text = f"{pre}{start_marker}\n{inner_markdown}\n{end_marker}{post}"
+    with open(readme_path, "w", encoding="utf-8") as f:
+        f.write(new_text)
+
 
 def get_contribution_level(count):
     """Determine contribution level based on count"""
@@ -158,11 +223,35 @@ def get_contribution_level(count):
     else:
         return 'level4'
 
-def generate_contribution_grid(contributions, weeks=52):
-    """Generate contribution grid for the last N weeks"""
+
+def compute_month_markers(grid):
+    """Column index must match the contribution-cell packing (new column after each Sunday)."""
+    week = 0
+    prev_key = None
+    raw = []
+    for day in grid:
+        d = datetime.strptime(day["date"], "%Y-%m-%d").date()
+        key = (d.year, d.month)
+        if key != prev_key:
+            raw.append((week, d))
+            prev_key = key
+        if day["weekday"] == 6:
+            week += 1
+    abbrevs = [d.strftime("%b") for _, d in raw]
+    dup = {a for a, n in Counter(abbrevs).items() if n > 1}
+    markers = []
+    for col, d in raw:
+        ab = d.strftime("%b")
+        text = f"{ab} '{d.strftime('%y')}" if ab in dup else ab
+        markers.append({"col": col, "text": text})
+    return markers
+
+
+def generate_contribution_grid(contributions, days=365):
+    """Generate contribution grid for the last `days` calendar days (inclusive of today)."""
     grid = []
     end_date = datetime.now().date()
-    start_date = end_date - timedelta(weeks=weeks)
+    start_date = end_date - timedelta(days=days - 1)
     
     current_date = start_date
     while current_date <= end_date:
@@ -179,28 +268,44 @@ def generate_contribution_grid(contributions, weeks=52):
     
     return grid
 
+
+def grid_week_columns(grid):
+    """Columns used by the same packing rules as the draw loop (advance after each Sunday)."""
+    week = 0
+    max_col = 0
+    for day in grid:
+        max_col = max(max_col, week)
+        if day["weekday"] == 6:
+            week += 1
+    return max_col + 1
+
+
 def generate_svg(stats, width=800, height=200):
     """Generate SVG visualization"""
-    contributions = stats['daily_contributions']
-    total = stats['total_contributions']
-    projects = stats['total_projects']
+    contributions = stats["daily_contributions"]
+    total = stats["total_contributions"]
+    projects = stats["total_projects"]
+    c7 = stats.get("contributions_7d", 0)
+    c30 = stats.get("contributions_30d", 0)
     
     grid = generate_contribution_grid(contributions)
-    
+    month_markers = compute_month_markers(grid)
+
     # SVG parameters
     cell_size = 10
     cell_gap = 3
     margin = 20
-    header_height = 60
-    
-    # Calculate dimensions
-    weeks = 52
+    header_height = 94
+    month_band = 16
+    cell_y0 = month_band
+
+    num_week_cols = grid_week_columns(grid)
     days = 7
-    grid_width = weeks * (cell_size + cell_gap)
+    grid_width = num_week_cols * (cell_size + cell_gap)
     grid_height = days * (cell_size + cell_gap)
-    
+
     svg_width = grid_width + 2 * margin + 100
-    svg_height = grid_height + 2 * margin + header_height
+    svg_height = grid_height + 2 * margin + header_height + month_band
     
     # Start SVG
     svg = [
@@ -211,29 +316,42 @@ def generate_svg(stats, width=800, height=200):
         f'  <text x="{margin}" y="{margin + 20}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="18" font-weight="bold">',
         f'    GitLab Contributions',
         '  </text>',
+        f'  <text x="{margin}" y="{margin + 36}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="11" opacity="0.85">',
+        f'    Last 365 days',
+        '  </text>',
         '',
         '  <!-- Stats -->',
-        f'  <text x="{margin}" y="{margin + 45}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="12">',
-        f'    Total: {total} contributions in the last year',
+        f'  <text x="{margin}" y="{margin + 54}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="12">',
+        f'    Activity: {c7} (7d) · {c30} (30d) · {projects} repos',
+        '  </text>',
+        f'  <text x="{margin}" y="{margin + 72}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="12">',
+        f'    Total: {total} contributions (last 365 days)',
         '  </text>',
         '',
         '  <!-- Contribution Grid -->',
-        f'  <g transform="translate({margin + 30}, {margin + header_height})">',
+        f'  <g transform="translate({margin + 30}, {margin + header_height + month_band})">',
     ]
-    
+
+    col_step = cell_size + cell_gap
+    for m in month_markers:
+        cx = m["col"] * col_step + cell_size / 2
+        svg.append(
+            f'    <text x="{cx}" y="10" fill="{COLORS["text"]}" font-family="Arial, sans-serif" '
+            f'font-size="8" text-anchor="middle">{m["text"]}</text>'
+        )
+
     # Draw day labels
     days_labels = ['Mon', 'Wed', 'Fri']
     for i, label in enumerate([1, 3, 5]):
-        y = label * (cell_size + cell_gap)
+        y = cell_y0 + label * (cell_size + cell_gap)
         svg.append(f'    <text x="-25" y="{y + cell_size}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="9">{days_labels[i]}</text>')
-    
+
     # Draw contribution cells
     week = 0
-    week_day = grid[0]['weekday']
-    
+
     for i, day in enumerate(grid):
         x = week * (cell_size + cell_gap)
-        y = day['weekday'] * (cell_size + cell_gap)
+        y = cell_y0 + day['weekday'] * (cell_size + cell_gap)
         color = COLORS[day['level']]
         
         svg.append(
@@ -287,7 +405,15 @@ def main():
     stats = fetcher.get_stats(user_id)
     
     print(f"Total contributions: {stats['total_contributions']}")
-    print(f"Total projects: {stats['total_projects']}")
+    print(
+        f"Projects: {stats['total_projects']} "
+        f"(membership API: {stats['membership_projects']}, "
+        f"repos with activity: {stats['activity_projects']})"
+    )
+    print(
+        f"Activity events: {stats['contributions_7d']} (7d) · "
+        f"{stats['contributions_30d']} (30d)"
+    )
     
     # Generate SVG
     print(f"Generating {OUTPUT_FILE}...")
@@ -295,7 +421,22 @@ def main():
     
     with open(OUTPUT_FILE, 'w') as f:
         f.write(svg_content)
-    
+
+    readme_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md")
+    gl_md = (
+        f"**GitLab:** **{stats['contributions_7d']}** events (7d) · "
+        f"**{stats['contributions_30d']}** events (30d) · "
+        f"**{stats['total_contributions']}** events (365d) · "
+        f"**{stats['total_projects']}** repositories "
+        f"(membership list or repos seen in your activity)."
+    )
+    update_readme_metrics_block(
+        readme_path,
+        "<!-- gitlab-metrics:start -->",
+        "<!-- gitlab-metrics:end -->",
+        gl_md,
+    )
+
     print(f"✓ Successfully generated {OUTPUT_FILE}")
     
     # Display recent activity
