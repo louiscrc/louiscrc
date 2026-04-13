@@ -389,7 +389,8 @@
     <rect x="689" y="0" width="10" height="10" fill="#161b22" rx="2"><title>2026-04-13: 0 commits</title></rect>
   </g>
 
-  <!-- Legend -->
+  <!-- Legend row: total (left), scale (right) -->
+  <text x="20" y="165" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8">Number of commits (365d) : 286</text>
   <g transform="translate(629, 155)">
     <text x="0" y="10" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">0</text>
     <rect x="30" y="0" width="10" height="10" fill="#161b22" rx="2"/>
