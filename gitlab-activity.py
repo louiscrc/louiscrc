@@ -148,29 +148,14 @@ class GitLabActivityFetcher:
         activity_projects = distinct_projects_from_events(events, days=365)
         total_projects = max(membership_projects, activity_projects)
 
-        contributions_7d = sum_contributions_last_ndays(contributions, 7)
-        contributions_30d = sum_contributions_last_ndays(contributions, 30)
-
         return {
             "total_contributions": total_contributions,
             "total_projects": total_projects,
             "membership_projects": membership_projects,
             "activity_projects": activity_projects,
-            "contributions_7d": contributions_7d,
-            "contributions_30d": contributions_30d,
             "daily_contributions": contributions,
             "events": events[:10],
         }
-
-
-def sum_contributions_last_ndays(contributions, n_days):
-    """Rolling sum of contribution counts for the last n_days calendar days (inclusive of today)."""
-    today = datetime.now().astimezone().date()
-    total = 0
-    for i in range(n_days):
-        d = (today - timedelta(days=i)).strftime("%Y-%m-%d")
-        total += contributions.get(d, 0)
-    return total
 
 
 def distinct_projects_from_events(events, days=365):
@@ -191,23 +176,6 @@ def distinct_projects_from_events(events, days=365):
         if pid is not None:
             ids.add(pid)
     return len(ids)
-
-
-def update_readme_metrics_block(readme_path, start_marker, end_marker, inner_markdown):
-    if not os.path.isfile(readme_path):
-        return
-    try:
-        with open(readme_path, encoding="utf-8") as f:
-            text = f.read()
-    except OSError:
-        return
-    if start_marker not in text or end_marker not in text:
-        return
-    pre, rest = text.split(start_marker, 1)
-    _, post = rest.split(end_marker, 1)
-    new_text = f"{pre}{start_marker}\n{inner_markdown}\n{end_marker}{post}"
-    with open(readme_path, "w", encoding="utf-8") as f:
-        f.write(new_text)
 
 
 def get_contribution_level(count):
@@ -281,110 +249,100 @@ def grid_week_columns(grid):
 
 
 def generate_svg(stats, width=800, height=200):
-    """Generate SVG visualization"""
+    """Generate SVG heatmap (rolling year ending today; month labels above grid)."""
     contributions = stats["daily_contributions"]
-    total = stats["total_contributions"]
-    projects = stats["total_projects"]
-    c7 = stats.get("contributions_7d", 0)
-    c30 = stats.get("contributions_30d", 0)
-    
+
     grid = generate_contribution_grid(contributions)
     month_markers = compute_month_markers(grid)
 
-    # SVG parameters
+    counts = [d["count"] for d in grid]
+    legend_min = min(counts) if counts else 0
+    legend_max = max(counts) if counts else 0
+
     cell_size = 10
     cell_gap = 3
     margin = 20
-    header_height = 94
-    month_band = 16
-    cell_y0 = month_band
+    month_band = 18
+    border_sw = 1
 
     num_week_cols = grid_week_columns(grid)
-    days = 7
     grid_width = num_week_cols * (cell_size + cell_gap)
-    grid_height = days * (cell_size + cell_gap)
+    grid_height = 7 * (cell_size + cell_gap)
 
     svg_width = grid_width + 2 * margin + 100
-    svg_height = grid_height + 2 * margin + header_height + month_band
-    
-    # Start SVG
-    svg = [
-        f'<svg width="{svg_width}" height="{svg_height}" xmlns="http://www.w3.org/2000/svg">',
-        f'  <rect width="{svg_width}" height="{svg_height}" fill="{COLORS["background"]}" rx="6"/>',
-        '',
-        '  <!-- Title -->',
-        f'  <text x="{margin}" y="{margin + 20}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="18" font-weight="bold">',
-        f'    GitLab Contributions',
-        '  </text>',
-        f'  <text x="{margin}" y="{margin + 36}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="11" opacity="0.85">',
-        f'    Last 365 days',
-        '  </text>',
-        '',
-        '  <!-- Stats -->',
-        f'  <text x="{margin}" y="{margin + 54}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="12">',
-        f'    Activity: {c7} (7d) · {c30} (30d) · {projects} repos',
-        '  </text>',
-        f'  <text x="{margin}" y="{margin + 72}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="12">',
-        f'    Total: {total} contributions (last 365 days)',
-        '  </text>',
-        '',
-        '  <!-- Contribution Grid -->',
-        f'  <g transform="translate({margin + 30}, {margin + header_height + month_band})">',
-    ]
+    svg_height = grid_height + 2 * margin + month_band + 36
 
     col_step = cell_size + cell_gap
+    svg = [
+        f'<svg width="{svg_width}" height="{svg_height}" xmlns="http://www.w3.org/2000/svg">',
+        f'  <rect x="{border_sw / 2}" y="{border_sw / 2}" width="{svg_width - border_sw}" '
+        f'height="{svg_height - border_sw}" fill="{COLORS["background"]}" rx="6" '
+        f'stroke="{COLORS["border"]}" stroke-width="{border_sw}"/>',
+        "",
+        "  <!-- Month labels (timeline above heatmap) -->",
+        f'  <g transform="translate({margin + 30}, {margin})">',
+    ]
+
     for m in month_markers:
         cx = m["col"] * col_step + cell_size / 2
         svg.append(
-            f'    <text x="{cx}" y="10" fill="{COLORS["text"]}" font-family="Arial, sans-serif" '
+            f'    <text x="{cx}" y="{month_band - 4}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" '
             f'font-size="8" text-anchor="middle">{m["text"]}</text>'
         )
 
-    # Draw day labels
-    days_labels = ['Mon', 'Wed', 'Fri']
-    for i, label in enumerate([1, 3, 5]):
-        y = cell_y0 + label * (cell_size + cell_gap)
-        svg.append(f'    <text x="-25" y="{y + cell_size}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="9">{days_labels[i]}</text>')
+    svg.append("  </g>")
+    svg.append(
+        f'  <g transform="translate({margin + 30}, {margin + month_band})">'
+    )
 
-    # Draw contribution cells
+    for row, wlabel in zip([0, 2, 4], ["Mon", "Wed", "Fri"]):
+        y = row * (cell_size + cell_gap)
+        svg.append(
+            f'    <text x="-25" y="{y + cell_size}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" '
+            f'font-size="9">{wlabel}</text>'
+        )
+
     week = 0
-
-    for i, day in enumerate(grid):
+    for day in grid:
         x = week * (cell_size + cell_gap)
-        y = cell_y0 + day['weekday'] * (cell_size + cell_gap)
-        color = COLORS[day['level']]
-        
+        y = day["weekday"] * (cell_size + cell_gap)
+        color = COLORS[day["level"]]
         svg.append(
             f'    <rect x="{x}" y="{y}" width="{cell_size}" height="{cell_size}" '
             f'fill="{color}" rx="2">'
-            f'<title>{day["date"]}: {day["count"]} contributions</title></rect>'
+            f'<title>{day["date"]}: {day["count"]} events</title></rect>'
         )
-        
-        if day['weekday'] == 6:  # Sunday, move to next week
+        if day["weekday"] == 6:
             week += 1
-    
-    svg.extend([
-        '  </g>',
-        '',
-        '  <!-- Legend -->',
-        f'  <g transform="translate({svg_width - 200}, {svg_height - 30})">',
-        f'    <text x="0" y="10" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="9">Less</text>',
-    ])
-    
-    # Draw legend boxes
-    legend_levels = ['level0', 'level1', 'level2', 'level3', 'level4']
+
+    svg.extend(
+        [
+            "  </g>",
+            "",
+            "  <!-- Legend -->",
+            f'  <g transform="translate({svg_width - 200}, {svg_height - 30})">',
+            f'    <text x="0" y="10" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="9">{legend_min}</text>',
+        ]
+    )
+
+    legend_levels = ["level0", "level1", "level2", "level3", "level4"]
     for i, level in enumerate(legend_levels):
         x = 30 + i * (cell_size + cell_gap)
-        svg.append(f'    <rect x="{x}" y="0" width="{cell_size}" height="{cell_size}" fill="{COLORS[level]}" rx="2"/>')
-    
-    svg.extend([
-        f'    <text x="{30 + 5 * (cell_size + cell_gap) + 5}" y="10" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="9">More</text>',
-        '  </g>',
-        '',
-        '</svg>'
-    ])
-    
-    return '\n'.join(svg)
+        svg.append(
+            f'    <rect x="{x}" y="0" width="{cell_size}" height="{cell_size}" fill="{COLORS[level]}" rx="2"/>'
+        )
+
+    svg.extend(
+        [
+            f'    <text x="{30 + 5 * (cell_size + cell_gap) + 5}" y="10" fill="{COLORS["text"]}" '
+            f'font-family="Arial, sans-serif" font-size="9">{legend_max}</text>',
+            "  </g>",
+            "",
+            "</svg>",
+        ]
+    )
+
+    return "\n".join(svg)
 
 def main():
     """Main function"""
@@ -401,41 +359,21 @@ def main():
     print(f"Found user ID: {user_id}")
     
     # Fetch stats
-    print("Fetching contributions...")
+    print("Fetching activity...")
     stats = fetcher.get_stats(user_id)
     
-    print(f"Total contributions: {stats['total_contributions']}")
+    print(f"Total activity (365d): {stats['total_contributions']} events")
     print(
         f"Projects: {stats['total_projects']} "
         f"(membership API: {stats['membership_projects']}, "
         f"repos with activity: {stats['activity_projects']})"
     )
-    print(
-        f"Activity events: {stats['contributions_7d']} (7d) · "
-        f"{stats['contributions_30d']} (30d)"
-    )
-    
     # Generate SVG
     print(f"Generating {OUTPUT_FILE}...")
     svg_content = generate_svg(stats)
     
     with open(OUTPUT_FILE, 'w') as f:
         f.write(svg_content)
-
-    readme_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md")
-    gl_md = (
-        f"**GitLab:** **{stats['contributions_7d']}** events (7d) · "
-        f"**{stats['contributions_30d']}** events (30d) · "
-        f"**{stats['total_contributions']}** events (365d) · "
-        f"**{stats['total_projects']}** repositories "
-        f"(membership list or repos seen in your activity)."
-    )
-    update_readme_metrics_block(
-        readme_path,
-        "<!-- gitlab-metrics:start -->",
-        "<!-- gitlab-metrics:end -->",
-        gl_md,
-    )
 
     print(f"✓ Successfully generated {OUTPUT_FILE}")
     

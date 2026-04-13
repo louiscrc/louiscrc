@@ -20,26 +20,17 @@ Welcome to my GitHub profile!
 ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
 ![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 
-## 📈 Contribution Graph
+## 📈 Commits heatmaps
 
-Most of my day-to-day work lives in **private GitLab** repositories, so what you see on GitHub is only part of the picture. The graphs below cover **GitHub** and **GitLab** over the **last 365 days**.
+Most of my day-to-day work lives in **private GitLab** repositories, so here are the heatmaps for my private commits on GitLab and GitHub.
 
-### GitHub Activity
+### GitLab commits
 
-<!-- github-metrics:start -->
-**GitHub:** **0** commits (7d) · **1** commits (30d) · **286** contributions (365d). Lines (contribution commits): **+0/-0** (7d) · **+1007/-2** (30d).
-<!-- github-metrics:end -->
+![GitLab activity heatmap](./gitlab-activity.svg)
 
-![GitHub Contributions](./github-stats.svg)
+### GitHub commits
 
-### GitLab Activity
-
-<!-- gitlab-metrics:start -->
-**GitLab:** **18** events (7d) · **39** events (30d) · **563** events (365d) · **90** repositories (membership list or repos seen in your activity).
-<!-- gitlab-metrics:end -->
-
-![GitLab Contributions](./gitlab-activity.svg)
-
+![GitHub commits heatmap](./github-stats.svg)
 
 ## 🤝 Connect With Me
 
