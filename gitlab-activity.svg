@@ -21,7 +21,6 @@
     <text x="-25" y="10" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Mon</text>
     <text x="-25" y="36" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Wed</text>
     <text x="-25" y="62" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Fri</text>
-    <rect x="0" y="65" width="10" height="10" fill="#161b22" rx="2"><title>2025-04-19: 0 events</title></rect>
     <rect x="0" y="78" width="10" height="10" fill="#161b22" rx="2"><title>2025-04-20: 0 events</title></rect>
     <rect x="13" y="0" width="10" height="10" fill="#006d32" rx="2"><title>2025-04-21: 4 events</title></rect>
     <rect x="13" y="13" width="10" height="10" fill="#161b22" rx="2"><title>2025-04-22: 0 events</title></rect>
@@ -386,6 +385,7 @@
     <rect x="676" y="39" width="10" height="10" fill="#161b22" rx="2"><title>2026-04-16: 0 events</title></rect>
     <rect x="676" y="52" width="10" height="10" fill="#161b22" rx="2"><title>2026-04-17: 0 events</title></rect>
     <rect x="676" y="65" width="10" height="10" fill="#161b22" rx="2"><title>2026-04-18: 0 events</title></rect>
+    <rect x="676" y="78" width="10" height="10" fill="#161b22" rx="2"><title>2026-04-19: 0 events</title></rect>
   </g>
 
   <!-- Legend row: total (left), scale (right) -->
