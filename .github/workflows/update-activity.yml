@@ -32,7 +32,7 @@ jobs:
         env:
           GITLAB_USERNAME: 'louiscrc'
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-          GITLAB_URL: 'https://gitlab.com'
+          GITLAB_URL: ${{ secrets.GITLAB_URL }}
         run: |
           python gitlab-activity.py
 

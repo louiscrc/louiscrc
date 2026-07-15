@@ -1,112 +1,112 @@
 #!/usr/bin/env python3
 """
 GitLab Activity Tracker
-Fetches GitLab contributions and generates an SVG visualization
+Counts commits from repository history (not the Events API) so migrated
+repos keep their authored dates after an instance move.
 """
 
-import requests
-import json
-from datetime import datetime, timedelta
-from collections import Counter, defaultdict
 import os
 import sys
+from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta, timezone
+
+import requests
 
 # Configuration
-GITLAB_USERNAME = os.getenv('GITLAB_USERNAME', 'louiscrc')
-GITLAB_TOKEN = os.getenv('GITLAB_TOKEN', '')
-GITLAB_URL = os.getenv('GITLAB_URL', 'https://gitlab.com')
-OUTPUT_FILE = 'gitlab-activity.svg'
+GITLAB_USERNAME = os.getenv("GITLAB_USERNAME", "louiscrc")
+GITLAB_TOKEN = os.getenv("GITLAB_TOKEN", "")
+GITLAB_URL = (os.getenv("GITLAB_URL") or "https://gitlab.com").rstrip("/")
+OUTPUT_FILE = "gitlab-activity.svg"
+MAX_WORKERS = int(os.getenv("GITLAB_MAX_WORKERS", "8"))
 
-# Color scheme (GitHub-like)
 COLORS = {
-    'background': '#0d1117',
-    'border': '#30363d',
-    'text': '#c9d1d9',
-    'level0': '#161b22',
-    'level1': '#0e4429',
-    'level2': '#006d32',
-    'level3': '#26a641',
-    'level4': '#39d353',
+    "background": "#0d1117",
+    "border": "#30363d",
+    "text": "#c9d1d9",
+    "level0": "#161b22",
+    "level1": "#0e4429",
+    "level2": "#006d32",
+    "level3": "#26a641",
+    "level4": "#39d353",
 }
 
+
 class GitLabActivityFetcher:
-    def __init__(self, username, token=None, gitlab_url='https://gitlab.com'):
+    def __init__(self, username, token=None, gitlab_url="https://gitlab.com"):
         self.username = username
         self.token = token
-        self.gitlab_url = gitlab_url
-        self.api_url = f"{gitlab_url}/api/v4"
+        self.gitlab_url = gitlab_url.rstrip("/")
+        self.api_url = f"{self.gitlab_url}/api/v4"
         self.headers = {}
         if token:
-            self.headers['PRIVATE-TOKEN'] = token
-    
+            self.headers["PRIVATE-TOKEN"] = token
+
     def get_user_id(self):
-        """Get user ID from username"""
+        """Resolve username → id (public users endpoint)."""
         try:
             response = requests.get(
                 f"{self.api_url}/users",
-                params={'username': self.username},
+                params={"username": self.username},
                 headers=self.headers,
-                timeout=10
+                timeout=30,
             )
             response.raise_for_status()
             users = response.json()
             if users:
-                return users[0]['id']
+                return users[0]["id"]
         except Exception as e:
             print(f"Error fetching user ID: {e}", file=sys.stderr)
         return None
-    
-    def get_user_events(self, user_id, days=365):
-        """Fetch user events from GitLab"""
-        events = []
-        page = 1
-        per_page = 100
-        
+
+    def get_author_emails(self):
+        """Emails linked to the authenticated account (used to attribute commits)."""
+        emails = set()
+        if not self.token:
+            return emails
+
         try:
-            while len(events) < 1000:  # Limit to prevent excessive API calls
-                # Use authenticated /events endpoint instead of /users/:id/events 
-                # to get events across all namespaces the user has access to
-                url = f"{self.api_url}/events" if self.token else f"{self.api_url}/users/{user_id}/events"
-                response = requests.get(
-                    url,
-                    params={'per_page': per_page, 'page': page},
-                    headers=self.headers,
-                    timeout=10
-                )
-                response.raise_for_status()
-                page_events = response.json()
-                
-                if not page_events:
-                    break
-                
-                events.extend(page_events)
-                page += 1
-                
-                # Check if we've gone back far enough
-                if page_events:
-                    oldest_date = datetime.fromisoformat(page_events[-1]['created_at'].replace('Z', '+00:00'))
-                    if oldest_date < datetime.now().astimezone() - timedelta(days=days):
-                        break
+            me = requests.get(f"{self.api_url}/user", headers=self.headers, timeout=30)
+            me.raise_for_status()
+            profile = me.json()
+            for key in ("email", "public_email", "commit_email"):
+                val = (profile.get(key) or "").strip().lower()
+                if val:
+                    emails.add(val)
         except Exception as e:
-            print(f"Error fetching events: {e}", file=sys.stderr)
-        
-        return events
-    
-    def get_user_projects(self, user_id):
-        """Fetch user's projects (paginated). With a token, uses membership=true."""
+            print(f"Warning: could not load /user profile: {e}", file=sys.stderr)
+
+        try:
+            resp = requests.get(
+                f"{self.api_url}/user/emails", headers=self.headers, timeout=30
+            )
+            if resp.ok:
+                for row in resp.json():
+                    val = (row.get("email") or "").strip().lower()
+                    if val:
+                        emails.add(val)
+        except Exception as e:
+            print(f"Warning: could not load /user/emails: {e}", file=sys.stderr)
+
+        return emails
+
+    def get_user_projects(self):
+        """Membership projects (paginated). Token required for private repos."""
         all_projects = []
         page = 1
         try:
-            url = f"{self.api_url}/projects" if self.token else f"{self.api_url}/users/{user_id}/projects"
             while page <= 50:
-                params = {"per_page": 100, "page": page}
-                if self.token:
-                    params["membership"] = "true"
+                params = {
+                    "per_page": 100,
+                    "page": page,
+                    "membership": "true",
+                    "simple": "true",
+                }
                 response = requests.get(
-                    url,
+                    f"{self.api_url}/projects",
                     params=params,
                     headers=self.headers,
-                    timeout=10,
+                    timeout=30,
                 )
                 response.raise_for_status()
                 batch = response.json()
@@ -120,80 +120,133 @@ class GitLabActivityFetcher:
         except Exception as e:
             print(f"Error fetching projects: {e}", file=sys.stderr)
             return []
-    
-    def calculate_contributions(self, events, days=365):
-        """Calculate daily contribution counts"""
+
+    def get_project_commits(self, project_id, since_iso, author_emails):
+        """Commits for one project since cutoff (all branches), filtered by author email."""
+        emails = {e.lower() for e in author_emails}
+        commits = []
+        # Server-side author filter when possible (one email); still verify client-side.
+        author_param = next(iter(emails)) if len(emails) == 1 else None
+        page = 1
+        try:
+            while page <= 100:
+                params = {
+                    "since": since_iso,
+                    "all": "true",
+                    "per_page": 100,
+                    "page": page,
+                }
+                if author_param:
+                    params["author"] = author_param
+                response = requests.get(
+                    f"{self.api_url}/projects/{project_id}/repository/commits",
+                    params=params,
+                    headers=self.headers,
+                    timeout=60,
+                )
+                if response.status_code in (404, 403):
+                    break
+                response.raise_for_status()
+                batch = response.json()
+                if not batch:
+                    break
+                for commit in batch:
+                    email = (commit.get("author_email") or "").strip().lower()
+                    if email in emails:
+                        commits.append(commit)
+                if len(batch) < 100:
+                    break
+                page += 1
+        except Exception as e:
+            print(f"Warning: commits for project {project_id}: {e}", file=sys.stderr)
+        return commits
+
+    def calculate_contributions_from_commits(self, commits, days=365):
+        """Bucket commits by authored_date (preserves pre-migration history)."""
         contributions = defaultdict(int)
-        cutoff_date = datetime.now().astimezone() - timedelta(days=days)
-        
-        for event in events:
-            try:
-                event_date = datetime.fromisoformat(event['created_at'].replace('Z', '+00:00'))
-                if event_date >= cutoff_date:
-                    date_str = event_date.strftime('%Y-%m-%d')
-                    contributions[date_str] += 1
-            except Exception as e:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        seen = set()
+
+        for commit in commits:
+            sha = commit.get("id") or commit.get("short_id")
+            if sha and sha in seen:
                 continue
-        
-        return contributions
 
-    def get_stats(self, user_id):
-        """Get user statistics"""
-        projects = self.get_user_projects(user_id)
-        events = self.get_user_events(user_id)
-        contributions = self.calculate_contributions(events)
+            raw = commit.get("authored_date") or commit.get("committed_date")
+            if not raw:
+                continue
+            try:
+                dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except (TypeError, ValueError):
+                continue
+            if dt.astimezone(timezone.utc) < cutoff:
+                continue
 
-        total_contributions = sum(contributions.values())
-        membership_projects = len(projects)
-        activity_projects = distinct_projects_from_events(events, days=365)
-        total_projects = max(membership_projects, activity_projects)
+            if sha:
+                seen.add(sha)
+            contributions[dt.date().isoformat()] += 1
+
+        return contributions, len(seen)
+
+    def get_stats(self, days=365):
+        """Build heatmap stats from repository commit history."""
+        if not self.token:
+            print("Error: GITLAB_TOKEN is required to read private commit history.")
+            sys.exit(1)
+
+        emails = self.get_author_emails()
+        if not emails:
+            print("Error: no author emails found on the authenticated GitLab user.")
+            sys.exit(1)
+
+        projects = self.get_user_projects()
+        print(f"Scanning {len(projects)} projects...")
+
+        since_iso = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        all_commits = []
+        projects_with_commits = set()
+
+        def fetch_one(project):
+            pid = project["id"]
+            return pid, self.get_project_commits(pid, since_iso, emails)
+
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+            futures = [pool.submit(fetch_one, p) for p in projects]
+            done = 0
+            for fut in as_completed(futures):
+                pid, commits = fut.result()
+                done += 1
+                if commits:
+                    projects_with_commits.add(pid)
+                    all_commits.extend(commits)
+                if done % 10 == 0 or done == len(projects):
+                    print(f"  … {done}/{len(projects)}")
+
+        contributions, unique_commits = self.calculate_contributions_from_commits(
+            all_commits, days=days
+        )
 
         return {
-            "total_contributions": total_contributions,
-            "total_projects": total_projects,
-            "membership_projects": membership_projects,
-            "activity_projects": activity_projects,
+            "total_contributions": unique_commits,
+            "total_projects": len(projects),
+            "activity_projects": len(projects_with_commits),
             "daily_contributions": contributions,
-            "events": events[:10],
         }
 
 
-def distinct_projects_from_events(events, days=365):
-    """Count distinct project_id values in the event stream (covers private activity the /projects list can miss)."""
-    cutoff = datetime.now().astimezone() - timedelta(days=days)
-    ids = set()
-    for e in events:
-        try:
-            raw = e.get("created_at")
-            if not raw:
-                continue
-            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-            if dt < cutoff:
-                continue
-        except (TypeError, ValueError):
-            continue
-        pid = e.get("project_id")
-        if pid is not None:
-            ids.add(pid)
-    return len(ids)
-
-
 def get_contribution_level(count):
-    """Determine contribution level based on count"""
     if count == 0:
-        return 'level0'
-    elif count <= 3:
-        return 'level1'
-    elif count <= 6:
-        return 'level2'
-    elif count <= 9:
-        return 'level3'
-    else:
-        return 'level4'
+        return "level0"
+    if count <= 3:
+        return "level1"
+    if count <= 6:
+        return "level2"
+    if count <= 9:
+        return "level3"
+    return "level4"
 
 
 def compute_month_markers(grid):
-    """Column index must match the contribution-cell packing (new column after each Sunday)."""
     week = 0
     prev_key = None
     raw = []
@@ -216,29 +269,28 @@ def compute_month_markers(grid):
 
 
 def generate_contribution_grid(contributions, days=365):
-    """Generate contribution grid for the last `days` calendar days (inclusive of today)."""
     grid = []
     end_date = datetime.now().date()
     start_date = end_date - timedelta(days=days - 1)
-    
+
     current_date = start_date
     while current_date <= end_date:
-        date_str = current_date.strftime('%Y-%m-%d')
+        date_str = current_date.strftime("%Y-%m-%d")
         count = contributions.get(date_str, 0)
-        level = get_contribution_level(count)
-        grid.append({
-            'date': date_str,
-            'count': count,
-            'level': level,
-            'weekday': current_date.weekday()
-        })
+        grid.append(
+            {
+                "date": date_str,
+                "count": count,
+                "level": get_contribution_level(count),
+                "weekday": current_date.weekday(),
+            }
+        )
         current_date += timedelta(days=1)
-    
+
     return grid
 
 
 def grid_week_columns(grid):
-    """Columns used by the same packing rules as the draw loop (advance after each Sunday)."""
     week = 0
     max_col = 0
     for day in grid:
@@ -249,7 +301,6 @@ def grid_week_columns(grid):
 
 
 def generate_svg(stats, width=800, height=200):
-    """Generate SVG heatmap (rolling year ending today; month labels above grid)."""
     contributions = stats["daily_contributions"]
     total_commits_365 = stats["total_contributions"]
 
@@ -292,9 +343,7 @@ def generate_svg(stats, width=800, height=200):
         )
 
     svg.append("  </g>")
-    svg.append(
-        f'  <g transform="translate({margin + 30}, {margin + month_band})">'
-    )
+    svg.append(f'  <g transform="translate({margin + 30}, {margin + month_band})">')
 
     for row, wlabel in zip([0, 2, 4], ["Mon", "Wed", "Fri"]):
         y = row * (cell_size + cell_gap)
@@ -311,7 +360,7 @@ def generate_svg(stats, width=800, height=200):
         svg.append(
             f'    <rect x="{x}" y="{y}" width="{cell_size}" height="{cell_size}" '
             f'fill="{color}" rx="2">'
-            f'<title>{day["date"]}: {day["count"]} events</title></rect>'
+            f'<title>{day["date"]}: {day["count"]} commits</title></rect>'
         )
         if day["weekday"] == 6:
             week += 1
@@ -348,46 +397,32 @@ def generate_svg(stats, width=800, height=200):
 
     return "\n".join(svg)
 
+
 def main():
-    """Main function"""
     print(f"Fetching GitLab activity for {GITLAB_USERNAME}...")
-    
+
     fetcher = GitLabActivityFetcher(GITLAB_USERNAME, GITLAB_TOKEN, GITLAB_URL)
-    
-    # Get user ID
+
     user_id = fetcher.get_user_id()
     if not user_id:
         print(f"Error: Could not find user '{GITLAB_USERNAME}'")
         sys.exit(1)
-    
-    print(f"Found user ID: {user_id}")
-    
-    # Fetch stats
-    print("Fetching activity...")
-    stats = fetcher.get_stats(user_id)
-    
-    print(f"Total activity (365d): {stats['total_contributions']} events")
+
+    print("Fetching commit history...")
+    stats = fetcher.get_stats()
+
+    print(f"Total commits (365d): {stats['total_contributions']}")
     print(
         f"Projects: {stats['total_projects']} "
-        f"(membership API: {stats['membership_projects']}, "
-        f"repos with activity: {stats['activity_projects']})"
+        f"(with your commits: {stats['activity_projects']})"
     )
-    # Generate SVG
+
     print(f"Generating {OUTPUT_FILE}...")
-    svg_content = generate_svg(stats)
-    
-    with open(OUTPUT_FILE, 'w') as f:
-        f.write(svg_content)
+    with open(OUTPUT_FILE, "w") as f:
+        f.write(generate_svg(stats))
 
     print(f"✓ Successfully generated {OUTPUT_FILE}")
-    
-    # Display recent activity
-    if stats['events']:
-        print("\nRecent activity:")
-        for event in stats['events'][:5]:
-            action = event.get('action_name', 'unknown')
-            date = event.get('created_at', '')
-            print(f"  • {action} - {date}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
