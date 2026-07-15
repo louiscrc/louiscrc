@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import requests
 from collections import Counter
@@ -194,14 +195,11 @@ for day in grid:
     if day["weekday"] == 6:
         week += 1
 
-legend_row_y = svg_height - 20
 svg.extend(
     [
         "  </g>",
         "",
-        "  <!-- Legend row: total (left), scale (right) -->",
-        f'  <text x="{margin}" y="{legend_row_y}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" '
-        f'font-size="8">Number of commits (365d) : {total_commits_365}</text>',
+        "  <!-- Intensity scale -->",
         f'  <g transform="translate({svg_width - 200}, {svg_height - 30})">',
         f'    <text x="0" y="10" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="9">{legend_min}</text>',
     ]
@@ -227,4 +225,34 @@ svg.extend(
 with open("github-stats.svg", "w") as f:
     f.write("\n".join(svg))
 
+README_FILE = "README.md"
+README_GITHUB_TITLE = re.compile(
+    r"\*\*GitHub\*\*(?: \(\d+ contributions in the last year\))?"
+    r"|\*\*GitHub \(\d+ contributions in the last year\)\*\*"
+)
+
+
+def update_readme_title(total_contributions):
+    try:
+        with open(README_FILE, "r", encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        print(f"Warning: {README_FILE} not found; skipping title update", file=sys.stderr)
+        return
+
+    title = f"**GitHub** ({total_contributions} contributions in the last year)"
+    new_text, n = README_GITHUB_TITLE.subn(title, text, count=1)
+    if n != 1:
+        print(
+            f"Warning: could not update GitHub title in {README_FILE}",
+            file=sys.stderr,
+        )
+        return
+
+    with open(README_FILE, "w", encoding="utf-8") as f:
+        f.write(new_text)
+    print(f"Updated {README_FILE} title → {title}")
+
+
+update_readme_title(total_commits_365)
 print("Successfully generated github-stats.svg")

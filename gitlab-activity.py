@@ -6,6 +6,7 @@ repos keep their authored dates after an instance move.
 """
 
 import os
+import re
 import sys
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -18,7 +19,12 @@ GITLAB_USERNAME = os.getenv("GITLAB_USERNAME", "louiscrc")
 GITLAB_TOKEN = os.getenv("GITLAB_TOKEN", "")
 GITLAB_URL = (os.getenv("GITLAB_URL") or "https://gitlab.com").rstrip("/")
 OUTPUT_FILE = "gitlab-activity.svg"
+README_FILE = "README.md"
 MAX_WORKERS = int(os.getenv("GITLAB_MAX_WORKERS", "8"))
+README_GITLAB_TITLE = re.compile(
+    r"\*\*GitLab\*\*(?: \(\d+ contributions in the last year\))?"
+    r"|\*\*GitLab \(\d+ contributions in the last year\)\*\*"
+)
 
 COLORS = {
     "background": "#0d1117",
@@ -302,7 +308,6 @@ def grid_week_columns(grid):
 
 def generate_svg(stats, width=800, height=200):
     contributions = stats["daily_contributions"]
-    total_commits_365 = stats["total_contributions"]
 
     grid = generate_contribution_grid(contributions)
     month_markers = compute_month_markers(grid)
@@ -365,14 +370,11 @@ def generate_svg(stats, width=800, height=200):
         if day["weekday"] == 6:
             week += 1
 
-    legend_row_y = svg_height - 20
     svg.extend(
         [
             "  </g>",
             "",
-            "  <!-- Legend row: total (left), scale (right) -->",
-            f'  <text x="{margin}" y="{legend_row_y}" fill="{COLORS["text"]}" font-family="Arial, sans-serif" '
-            f'font-size="8">Number of commits (365d) : {total_commits_365}</text>',
+            "  <!-- Intensity scale -->",
             f'  <g transform="translate({svg_width - 200}, {svg_height - 30})">',
             f'    <text x="0" y="10" fill="{COLORS["text"]}" font-family="Arial, sans-serif" font-size="9">{legend_min}</text>',
         ]
@@ -398,6 +400,29 @@ def generate_svg(stats, width=800, height=200):
     return "\n".join(svg)
 
 
+def update_readme_title(total_contributions):
+    """Put the yearly total in the README GitLab heading."""
+    try:
+        with open(README_FILE, "r", encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        print(f"Warning: {README_FILE} not found; skipping title update", file=sys.stderr)
+        return
+
+    title = f"**GitLab** ({total_contributions} contributions in the last year)"
+    new_text, n = README_GITLAB_TITLE.subn(title, text, count=1)
+    if n != 1:
+        print(
+            f"Warning: could not update GitLab title in {README_FILE}",
+            file=sys.stderr,
+        )
+        return
+
+    with open(README_FILE, "w", encoding="utf-8") as f:
+        f.write(new_text)
+    print(f"Updated {README_FILE} title → {title}")
+
+
 def main():
     print(f"Fetching GitLab activity for {GITLAB_USERNAME}...")
 
@@ -421,6 +446,7 @@ def main():
     with open(OUTPUT_FILE, "w") as f:
         f.write(generate_svg(stats))
 
+    update_readme_title(stats["total_contributions"])
     print(f"✓ Successfully generated {OUTPUT_FILE}")
 
 
