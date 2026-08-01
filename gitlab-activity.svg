@@ -3,7 +3,7 @@
 
   <!-- Month labels (timeline above heatmap) -->
   <g transform="translate(50, 20)">
-    <text x="5.0" y="14" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8" text-anchor="middle">Aug</text>
+    <text x="5.0" y="14" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8" text-anchor="middle">Aug '25</text>
     <text x="70.0" y="14" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8" text-anchor="middle">Sep</text>
     <text x="122.0" y="14" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8" text-anchor="middle">Oct</text>
     <text x="174.0" y="14" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8" text-anchor="middle">Nov</text>
@@ -15,12 +15,12 @@
     <text x="512.0" y="14" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8" text-anchor="middle">May</text>
     <text x="577.0" y="14" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8" text-anchor="middle">Jun</text>
     <text x="629.0" y="14" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8" text-anchor="middle">Jul</text>
+    <text x="681.0" y="14" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="8" text-anchor="middle">Aug '26</text>
   </g>
   <g transform="translate(50, 38)">
     <text x="-25" y="10" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Mon</text>
     <text x="-25" y="36" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Wed</text>
     <text x="-25" y="62" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Fri</text>
-    <rect x="0" y="52" width="10" height="10" fill="#006d32" rx="2"><title>2025-08-01: 5 commits</title></rect>
     <rect x="0" y="65" width="10" height="10" fill="#0e4429" rx="2"><title>2025-08-02: 2 commits</title></rect>
     <rect x="0" y="78" width="10" height="10" fill="#161b22" rx="2"><title>2025-08-03: 0 commits</title></rect>
     <rect x="13" y="0" width="10" height="10" fill="#0e4429" rx="2"><title>2025-08-04: 1 commits</title></rect>
@@ -385,6 +385,7 @@
     <rect x="676" y="26" width="10" height="10" fill="#161b22" rx="2"><title>2026-07-29: 0 commits</title></rect>
     <rect x="676" y="39" width="10" height="10" fill="#161b22" rx="2"><title>2026-07-30: 0 commits</title></rect>
     <rect x="676" y="52" width="10" height="10" fill="#161b22" rx="2"><title>2026-07-31: 0 commits</title></rect>
+    <rect x="676" y="65" width="10" height="10" fill="#161b22" rx="2"><title>2026-08-01: 0 commits</title></rect>
   </g>
 
   <!-- Intensity scale -->
