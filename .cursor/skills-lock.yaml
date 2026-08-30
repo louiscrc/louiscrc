@@ -1,0 +1,8 @@
+# Managed by ~/.skills-library/scripts/sync_skills.py
+# Symlink mode is machine-local; run sync_skills on clone, or use --copy to vendor.
+library: ~/.skills-library
+mode: symlink
+skills:
+  - id: github-ops
+  - id: python-patterns
+  - id: python-testing
