@@ -21,7 +21,6 @@
     <text x="-25" y="10" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Mon</text>
     <text x="-25" y="36" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Wed</text>
     <text x="-25" y="62" fill="#c9d1d9" font-family="Arial, sans-serif" font-size="9">Fri</text>
-    <rect x="0" y="26" width="10" height="10" fill="#0e4429" rx="2"><title>2025-09-17: 1 commits</title></rect>
     <rect x="0" y="39" width="10" height="10" fill="#161b22" rx="2"><title>2025-09-18: 0 commits</title></rect>
     <rect x="0" y="52" width="10" height="10" fill="#161b22" rx="2"><title>2025-09-19: 0 commits</title></rect>
     <rect x="0" y="65" width="10" height="10" fill="#161b22" rx="2"><title>2025-09-20: 0 commits</title></rect>
@@ -368,10 +367,10 @@
     <rect x="637" y="39" width="10" height="10" fill="#39d353" rx="2"><title>2026-08-27: 20 commits</title></rect>
     <rect x="637" y="52" width="10" height="10" fill="#39d353" rx="2"><title>2026-08-28: 14 commits</title></rect>
     <rect x="637" y="65" width="10" height="10" fill="#26a641" rx="2"><title>2026-08-29: 8 commits</title></rect>
-    <rect x="637" y="78" width="10" height="10" fill="#39d353" rx="2"><title>2026-08-30: 25 commits</title></rect>
+    <rect x="637" y="78" width="10" height="10" fill="#39d353" rx="2"><title>2026-08-30: 24 commits</title></rect>
     <rect x="650" y="0" width="10" height="10" fill="#39d353" rx="2"><title>2026-08-31: 39 commits</title></rect>
     <rect x="650" y="13" width="10" height="10" fill="#39d353" rx="2"><title>2026-09-01: 41 commits</title></rect>
-    <rect x="650" y="26" width="10" height="10" fill="#39d353" rx="2"><title>2026-09-02: 15 commits</title></rect>
+    <rect x="650" y="26" width="10" height="10" fill="#39d353" rx="2"><title>2026-09-02: 14 commits</title></rect>
     <rect x="650" y="39" width="10" height="10" fill="#39d353" rx="2"><title>2026-09-03: 21 commits</title></rect>
     <rect x="650" y="52" width="10" height="10" fill="#0e4429" rx="2"><title>2026-09-04: 2 commits</title></rect>
     <rect x="650" y="65" width="10" height="10" fill="#161b22" rx="2"><title>2026-09-05: 0 commits</title></rect>
@@ -384,8 +383,9 @@
     <rect x="663" y="65" width="10" height="10" fill="#26a641" rx="2"><title>2026-09-12: 7 commits</title></rect>
     <rect x="663" y="78" width="10" height="10" fill="#39d353" rx="2"><title>2026-09-13: 10 commits</title></rect>
     <rect x="676" y="0" width="10" height="10" fill="#161b22" rx="2"><title>2026-09-14: 0 commits</title></rect>
-    <rect x="676" y="13" width="10" height="10" fill="#39d353" rx="2"><title>2026-09-15: 19 commits</title></rect>
-    <rect x="676" y="26" width="10" height="10" fill="#161b22" rx="2"><title>2026-09-16: 0 commits</title></rect>
+    <rect x="676" y="13" width="10" height="10" fill="#39d353" rx="2"><title>2026-09-15: 21 commits</title></rect>
+    <rect x="676" y="26" width="10" height="10" fill="#39d353" rx="2"><title>2026-09-16: 28 commits</title></rect>
+    <rect x="676" y="39" width="10" height="10" fill="#006d32" rx="2"><title>2026-09-17: 5 commits</title></rect>
   </g>
 
   <!-- Intensity scale -->
