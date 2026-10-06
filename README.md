@@ -23,10 +23,10 @@
 
 Most of my day-to-day work lives in **private GitLab** repositories, so the heatmaps below cover that activity and GitHub. Updated daily via GitHub Actions.
 
-**GitLab** (950 contributions in the last year)  
+**GitLab** (943 contributions in the last year)  
 ![GitLab activity heatmap](./gitlab-activity.svg)
 
-**GitHub** (498 contributions in the last year)  
+**GitHub** (500 contributions in the last year)  
 ![GitHub commits heatmap](./github-stats.svg)
 
 ## Connect
