@@ -26,7 +26,7 @@ Most of my day-to-day work lives in **private GitLab** repositories, so the heat
 **GitLab** (944 contributions in the last year)  
 ![GitLab activity heatmap](./gitlab-activity.svg)
 
-**GitHub** (502 contributions in the last year)  
+**GitHub** (509 contributions in the last year)  
 ![GitHub commits heatmap](./github-stats.svg)
 
 ## Connect
